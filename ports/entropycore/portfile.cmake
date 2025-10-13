@@ -1,7 +1,7 @@
 # Download the source
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
-    REPO YOUR_USERNAME/EntropyCore
+    REPO Geenz/EntropyCore
     REF v${VERSION}
     SHA512 0
     HEAD_REF main

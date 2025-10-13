@@ -2,7 +2,7 @@
   "name": "entropycore",
   "version": "1.0.0",
   "description": "Core utilities and concurrency primitives for Entropy Engine",
-  "homepage": "https://github.com/YOUR_USERNAME/EntropyCore",
+  "homepage": "https://github.com/Geenz/EntropyCore",
   "license": "MPL-2.0",
   "supports": "!uwp",
   "dependencies": [

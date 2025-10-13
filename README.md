@@ -22,7 +22,7 @@ Create or edit `vcpkg-configuration.json` in your project root:
   "registries": [
     {
       "kind": "git",
-      "repository": "https://github.com/YOUR_USERNAME/EntropyRegistry",
+      "repository": "https://github.com/Geenz/EntropyRegistry",
       "baseline": "LATEST_COMMIT_SHA",
       "packages": ["entropycore"]
     }
