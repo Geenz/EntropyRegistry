@@ -1,0 +1,11 @@
+EntropyCore provides CMake targets:
+
+    find_package(EntropyCore CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE EntropyCore::Core)
+
+EntropyCore has optional features:
+  - tracy: Enable Tracy profiler integration
+  - tests: Enable testing with Catch2
+
+To use features:
+    vcpkg install entropycore[tracy,tests]
