@@ -12,6 +12,10 @@ if(APPLE AND NOT DEFINED VCPKG_TARGET_TRIPLET)
     set(VCPKG_TARGET_TRIPLET "universal-osx" CACHE STRING "")
 endif()
 
+# Force static library linkage regardless of triplet default
+# This ensures EntropyCore is always built as a static library
+set(VCPKG_LIBRARY_LINKAGE static)
+
 # Configure the build
 # Note: EntropyCore requires CMake 3.28+ for FILE_SET HEADERS support
 vcpkg_cmake_configure(
