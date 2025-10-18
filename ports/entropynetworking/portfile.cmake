@@ -1,10 +1,13 @@
-# Determine platform-specific release artifact name
+# Determine platform-specific release artifact name and SHA512
 if(VCPKG_TARGET_IS_WINDOWS)
     set(RELEASE_NAME "EntropyNetworking-Windows-x64")
+    set(BINARY_SHA512 "WINDOWS_SHA512_PLACEHOLDER")
 elseif(VCPKG_TARGET_IS_OSX)
     set(RELEASE_NAME "EntropyNetworking-macOS-universal")
+    set(BINARY_SHA512 "MACOS_SHA512_PLACEHOLDER")
 elseif(VCPKG_TARGET_IS_LINUX)
     set(RELEASE_NAME "EntropyNetworking-Linux-gcc-14")
+    set(BINARY_SHA512 "LINUX_SHA512_PLACEHOLDER")
 endif()
 
 # Try to download pre-built binaries from GitHub releases
@@ -13,7 +16,7 @@ if(DEFINED RELEASE_NAME)
     vcpkg_download_distfile(ARCHIVE
         URLS "https://github.com/Geenz/EntropyNetworking/releases/download/v${VERSION}/${RELEASE_NAME}.tar.gz"
         FILENAME "entropynetworking-${VERSION}-${RELEASE_NAME}.tar.gz"
-        SKIP_SHA512
+        SHA512 "${BINARY_SHA512}"
     )
 
     vcpkg_extract_source_archive(PREBUILT_PATH

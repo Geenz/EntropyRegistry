@@ -159,11 +159,69 @@ calculate_source_sha512() {
     echo "$sha512"
 }
 
+# Calculate SHA512 for pre-built binaries
+calculate_binary_sha512s() {
+    local repo="$1"
+    local version="$2"
+    local package_name="$3"
+    local tmpdir
+
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' RETURN
+
+    log_info "Calculating SHA512s for pre-built binaries..."
+
+    declare -A binary_sha512s
+
+    for platform in "${REQUIRED_PLATFORMS[@]}"; do
+        local artifact_name="${package_name}-${platform}.tar.gz"
+        local binary_file="$tmpdir/$artifact_name"
+        local url="https://github.com/$repo/releases/download/v${version}/${artifact_name}"
+
+        log_info "  Downloading $artifact_name..."
+        if command -v curl &> /dev/null; then
+            if ! curl -sSL "$url" -o "$binary_file"; then
+                log_error "Failed to download $artifact_name"
+                return 1
+            fi
+        elif command -v wget &> /dev/null; then
+            if ! wget -q "$url" -O "$binary_file"; then
+                log_error "Failed to download $artifact_name"
+                return 1
+            fi
+        else
+            log_error "Neither curl nor wget found"
+            return 1
+        fi
+
+        local sha512
+        if command -v sha512sum &> /dev/null; then
+            sha512=$(sha512sum "$binary_file" | awk '{print $1}')
+        elif command -v shasum &> /dev/null; then
+            sha512=$(shasum -a 512 "$binary_file" | awk '{print $1}')
+        else
+            log_error "Neither sha512sum nor shasum found"
+            return 1
+        fi
+
+        binary_sha512s["$platform"]="$sha512"
+        log_success "  ✓ $platform: $sha512"
+    done
+
+    # Export as environment variables for caller
+    echo "${binary_sha512s[Windows-x64]}"
+    echo "${binary_sha512s[Linux-gcc-14]}"
+    echo "${binary_sha512s[macOS-universal]}"
+}
+
 # Update package port files
 update_port_files() {
     local package="$1"
     local new_version="$2"
     local sha512="$3"
+    local windows_sha512="$4"
+    local linux_sha512="$5"
+    local macos_sha512="$6"
     local port_dir="ports/$package"
 
     log_info "Updating port files for $package to $new_version"
@@ -190,29 +248,43 @@ update_port_files() {
 
     log_success "  ✓ Updated $vcpkg_json"
 
-    # Update portfile.cmake SHA512
+    # Update portfile.cmake SHA512s
     local portfile="$port_dir/portfile.cmake"
 
-    # Replace SHA512 line in vcpkg_from_github section
-    # Match exactly 128 hex characters after SHA512
+    # Replace binary SHA512 placeholders with actual values
     if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/WINDOWS_SHA512_PLACEHOLDER/$windows_sha512/g" "$portfile"
+        sed -i '' "s/LINUX_SHA512_PLACEHOLDER/$linux_sha512/g" "$portfile"
+        sed -i '' "s/MACOS_SHA512_PLACEHOLDER/$macos_sha512/g" "$portfile"
+        # Replace source SHA512 line in vcpkg_from_github section
         sed -i '' -E "s/SHA512 [a-f0-9]{128}/SHA512 $sha512/g" "$portfile"
     else
+        sed -i "s/WINDOWS_SHA512_PLACEHOLDER/$windows_sha512/g" "$portfile"
+        sed -i "s/LINUX_SHA512_PLACEHOLDER/$linux_sha512/g" "$portfile"
+        sed -i "s/MACOS_SHA512_PLACEHOLDER/$macos_sha512/g" "$portfile"
+        # Replace source SHA512 line in vcpkg_from_github section
         sed -i "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
     fi
 
-    # Verify the SHA512 was actually updated
+    # Verify all SHA512s were updated
+    if grep -q "PLACEHOLDER" "$portfile"; then
+        log_error "SHA512 placeholder replacement failed - placeholders still exist"
+        grep "PLACEHOLDER" "$portfile"
+        return 1
+    fi
+
+    # Verify the source SHA512 was actually updated
     local actual_sha512
-    actual_sha512=$(grep -oE 'SHA512 [a-f0-9]{128}' "$portfile" | head -n1 | awk '{print $2}')
+    actual_sha512=$(grep -oE 'SHA512 [a-f0-9]{128}' "$portfile" | tail -n1 | awk '{print $2}')
 
     if [[ "$actual_sha512" != "$sha512" ]]; then
-        log_error "SHA512 verification failed!"
+        log_error "Source SHA512 verification failed!"
         log_error "Expected: $sha512"
         log_error "Actual:   $actual_sha512"
         return 1
     fi
 
-    log_success "  ✓ Updated $portfile SHA512"
+    log_success "  ✓ Updated $portfile SHA512s"
 }
 
 # Update version database
@@ -314,6 +386,18 @@ process_package() {
 
         log_success "SHA512: $sha512"
 
+        # Calculate binary SHA512s
+        log_info "Calculating binary SHA512s..."
+        local binary_sha512s
+        if ! binary_sha512s=$(calculate_binary_sha512s "$repo" "$latest_version" "$package_name_pascal"); then
+            log_error "Failed to calculate binary SHA512s for $package"
+            return 1
+        fi
+
+        # Parse the three SHA512s from the output
+        local windows_sha512 linux_sha512 macos_sha512
+        read -r windows_sha512 linux_sha512 macos_sha512 <<< "$binary_sha512s"
+
         if [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would update $package to $latest_version"
             UPDATE_SUMMARY+="- $package: $current_version → $latest_version (dry run)\n"
@@ -321,7 +405,7 @@ process_package() {
         fi
 
         # Update port files
-        update_port_files "$package" "$latest_version" "$sha512"
+        update_port_files "$package" "$latest_version" "$sha512" "$windows_sha512" "$linux_sha512" "$macos_sha512"
 
         # Commit port changes
         git add "$port_dir/"
