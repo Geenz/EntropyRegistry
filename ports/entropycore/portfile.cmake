@@ -1,13 +1,13 @@
 # Determine platform-specific release artifact name and SHA512
 if(VCPKG_TARGET_IS_WINDOWS)
     set(RELEASE_NAME "EntropyCore-Windows-x64")
-    set(BINARY_SHA512 "[0;34m[INFO][0m")
+    set(BINARY_SHA512 "WINDOWS_SHA512_PLACEHOLDER")
 elseif(VCPKG_TARGET_IS_OSX)
     set(RELEASE_NAME "EntropyCore-macOS-universal")
-    set(BINARY_SHA512 "SHA512s for pre-built binaries...")
+    set(BINARY_SHA512 "MACOS_SHA512_PLACEHOLDER")
 elseif(VCPKG_TARGET_IS_LINUX)
     set(RELEASE_NAME "EntropyCore-Linux-gcc-14")
-    set(BINARY_SHA512 "Calculating")
+    set(BINARY_SHA512 "LINUX_SHA512_PLACEHOLDER")
 endif()
 
 # Try to download pre-built binaries from GitHub releases
