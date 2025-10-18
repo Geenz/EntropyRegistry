@@ -177,6 +177,17 @@ update_port_files() {
        "$vcpkg_json" > "$tmp_json"
     mv "$tmp_json" "$vcpkg_json"
 
+    # Verify the version was actually updated
+    local actual_version
+    actual_version=$(jq -r '.version' "$vcpkg_json")
+
+    if [[ "$actual_version" != "$new_version" ]]; then
+        log_error "Version verification failed in $vcpkg_json"
+        log_error "Expected: $new_version"
+        log_error "Actual:   $actual_version"
+        return 1
+    fi
+
     log_success "  ✓ Updated $vcpkg_json"
 
     # Update portfile.cmake SHA512
@@ -188,6 +199,17 @@ update_port_files() {
         sed -i '' -E "s/SHA512 [a-f0-9]{128}/SHA512 $sha512/g" "$portfile"
     else
         sed -i "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
+    fi
+
+    # Verify the SHA512 was actually updated
+    local actual_sha512
+    actual_sha512=$(grep -oE 'SHA512 [a-f0-9]{128}' "$portfile" | head -n1 | awk '{print $2}')
+
+    if [[ "$actual_sha512" != "$sha512" ]]; then
+        log_error "SHA512 verification failed!"
+        log_error "Expected: $sha512"
+        log_error "Actual:   $actual_sha512"
+        return 1
     fi
 
     log_success "  ✓ Updated $portfile SHA512"
