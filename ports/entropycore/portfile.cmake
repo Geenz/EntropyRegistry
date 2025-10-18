@@ -1,13 +1,13 @@
 # Determine platform-specific release artifact name and SHA512
 if(VCPKG_TARGET_IS_WINDOWS)
     set(RELEASE_NAME "EntropyCore-Windows-x64")
-    set(BINARY_SHA512 "c0a279943f4d6c19e23790b129bd34d57c840b7b58aa7350e39dc99ee542565a007605c4fbd26b9a0bd788b8bebe0c92f438e6d02103e6c2a5faa2057ce78699")
+    set(BINARY_SHA512 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0001")
 elseif(VCPKG_TARGET_IS_OSX)
     set(RELEASE_NAME "EntropyCore-macOS-universal")
-    set(BINARY_SHA512 "7aa91d4c5e686e87b8443320719741670b9bc2a2a83d0bf7e103ab5c378c46a43c25759c8e58cc3e17f508f5c37bc3c8d2ee5b26f72ca9f44a38b2afbcc587bd")
+    set(BINARY_SHA512 "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00")
 elseif(VCPKG_TARGET_IS_LINUX)
     set(RELEASE_NAME "EntropyCore-Linux-gcc-14")
-    set(BINARY_SHA512 "ebf8da34f6a73e4ea11f77111abdfa6a9d13307ecd8ad494b9b07fed3052cc60e58b0e8c332c1abdb94c85bf53a4d3fd228c3febca1d22041c5e022adc4ec226")
+    set(BINARY_SHA512 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0002")
 endif()
 
 # Try to download pre-built binaries from GitHub releases
