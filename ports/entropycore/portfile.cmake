@@ -32,7 +32,7 @@ if(DEFINED RELEASE_NAME)
 endif()
 
 if(PREBUILT_AVAILABLE)
-    # Copy pre-built files to package directory
+    # Copy pre-built files to package directory (already in correct vcpkg structure)
     file(COPY "${PREBUILT_PATH}/" DESTINATION "${CURRENT_PACKAGES_DIR}")
 
     # Fix up CMake configs
@@ -40,6 +40,10 @@ if(PREBUILT_AVAILABLE)
         PACKAGE_NAME EntropyCore
         CONFIG_PATH lib/cmake/EntropyCore
     )
+
+    # Remove duplicate headers from debug
+    file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+    file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
 else()
     # Fall back to building from source
     message(STATUS "Pre-built binaries not available, building EntropyCore from source")
@@ -48,7 +52,7 @@ else()
         OUT_SOURCE_PATH SOURCE_PATH
         REPO Geenz/EntropyCore
         REF v${VERSION}
-        SHA512 25323256b84129e991851162c50449fc535d23c6fa6b718fdc31d0a72dc581efabcf282a37e8151aa1f246ba49b5b232520402c53a7107a302bf30acd8731e0b
+        SHA512 7c96d9ddbe41b83f604c7c17bdf502a859cce4afefb498fa9e678942dc436eb6265fc64c34a2d0008c4d8811af1eaf40543cad3d2035859149666833bbd122c3
         HEAD_REF main
     )
 
