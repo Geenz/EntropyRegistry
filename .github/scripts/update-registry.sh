@@ -67,9 +67,19 @@ get_repo_from_portfile() {
 get_package_name_pascal() {
     local package="$1"
 
-    # Simple conversion: entropycore -> EntropyCore
-    # Split on underscore/hyphen, capitalize each part
-    echo "$package" | awk -F'[-_]' '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))} 1' OFS=''
+    # Map package names to their PascalCase equivalents
+    case "$package" in
+        entropycore)
+            echo "EntropyCore"
+            ;;
+        entropynetworking)
+            echo "EntropyNetworking"
+            ;;
+        *)
+            # Fallback: split on underscore/hyphen, capitalize each part
+            echo "$package" | awk -F'[-_]' '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))} 1' OFS=''
+            ;;
+    esac
 }
 
 # Check if all required pre-built binaries exist for a release
