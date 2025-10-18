@@ -132,13 +132,30 @@ calculate_source_sha512() {
     local url="https://github.com/$repo/archive/refs/tags/v${version}.tar.gz"
 
     log_info "Downloading source tarball from $url"
-    if ! wget -q "$url" -O "$tarball"; then
-        log_error "Failed to download source tarball"
+    if command -v curl &> /dev/null; then
+        if ! curl -sSL "$url" -o "$tarball"; then
+            log_error "Failed to download source tarball"
+            return 1
+        fi
+    elif command -v wget &> /dev/null; then
+        if ! wget -q "$url" -O "$tarball"; then
+            log_error "Failed to download source tarball"
+            return 1
+        fi
+    else
+        log_error "Neither curl nor wget found"
         return 1
     fi
 
     local sha512
-    sha512=$(sha512sum "$tarball" | awk '{print $1}')
+    if command -v sha512sum &> /dev/null; then
+        sha512=$(sha512sum "$tarball" | awk '{print $1}')
+    elif command -v shasum &> /dev/null; then
+        sha512=$(shasum -a 512 "$tarball" | awk '{print $1}')
+    else
+        log_error "Neither sha512sum nor shasum found"
+        return 1
+    fi
     echo "$sha512"
 }
 
@@ -166,7 +183,11 @@ update_port_files() {
     local portfile="$port_dir/portfile.cmake"
 
     # Replace SHA512 line in vcpkg_from_github section
-    sed -i "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
+    else
+        sed -i "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
+    fi
 
     log_success "  ✓ Updated $portfile SHA512"
 }
@@ -351,17 +372,21 @@ main() {
 
     # Export results for GitHub Actions
     if [[ "$UPDATES_MADE" == "true" ]]; then
-        echo "UPDATES_MADE=true" >> "$GITHUB_ENV"
-        echo "UPDATE_SUMMARY<<EOF" >> "$GITHUB_ENV"
-        echo -e "$UPDATE_SUMMARY" >> "$GITHUB_ENV"
-        echo "EOF" >> "$GITHUB_ENV"
+        if [[ -n "${GITHUB_ENV:-}" ]]; then
+            echo "UPDATES_MADE=true" >> "$GITHUB_ENV"
+            echo "UPDATE_SUMMARY<<EOF" >> "$GITHUB_ENV"
+            echo -e "$UPDATE_SUMMARY" >> "$GITHUB_ENV"
+            echo "EOF" >> "$GITHUB_ENV"
+        fi
 
         log_success "========================================="
         log_success "Updates completed successfully!"
         log_success "========================================="
         echo -e "$UPDATE_SUMMARY"
     else
-        echo "UPDATES_MADE=false" >> "$GITHUB_ENV"
+        if [[ -n "${GITHUB_ENV:-}" ]]; then
+            echo "UPDATES_MADE=false" >> "$GITHUB_ENV"
+        fi
         log_info "========================================="
         log_info "No updates needed - all packages up to date"
         log_info "========================================="
