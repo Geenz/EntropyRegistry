@@ -1,6 +1,6 @@
 {
   "name": "entropycore",
-  "version": "1.1.2",
+  "version": "1.1.4",
   "description": "Core utilities and concurrency primitives for Entropy Engine",
   "homepage": "https://github.com/Geenz/EntropyCore",
   "license": "MPL-2.0",
@@ -26,11 +26,15 @@
   "features": {
     "tracy": {
       "description": "Enable Tracy profiler integration",
-      "dependencies": ["tracy"]
+      "dependencies": [
+        "tracy"
+      ]
     },
     "tests": {
       "description": "Enable testing with Catch2",
-      "dependencies": ["catch2"]
+      "dependencies": [
+        "catch2"
+      ]
     }
   }
 }
