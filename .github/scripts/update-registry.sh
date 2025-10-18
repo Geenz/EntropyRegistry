@@ -395,9 +395,22 @@ process_package() {
             return 1
         fi
 
-        # Parse the three SHA512s from the output
+        # Parse the three SHA512s from the output (one per line)
         local windows_sha512 linux_sha512 macos_sha512
-        read -r windows_sha512 linux_sha512 macos_sha512 <<< "$binary_sha512s"
+        windows_sha512=$(echo "$binary_sha512s" | sed -n '1p')
+        linux_sha512=$(echo "$binary_sha512s" | sed -n '2p')
+        macos_sha512=$(echo "$binary_sha512s" | sed -n '3p')
+
+        # Validate all SHA512s were captured
+        if [[ -z "$windows_sha512" ]] || [[ -z "$linux_sha512" ]] || [[ -z "$macos_sha512" ]]; then
+            log_error "Failed to parse all binary SHA512s"
+            log_error "Windows: $windows_sha512"
+            log_error "Linux: $linux_sha512"
+            log_error "macOS: $macos_sha512"
+            return 1
+        fi
+
+        log_success "Binary SHA512s captured successfully"
 
         if [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would update $package to $latest_version"
