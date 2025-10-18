@@ -183,8 +183,9 @@ update_port_files() {
     local portfile="$port_dir/portfile.cmake"
 
     # Replace SHA512 line in vcpkg_from_github section
+    # Match exactly 128 hex characters after SHA512
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
+        sed -i '' -E "s/SHA512 [a-f0-9]{128}/SHA512 $sha512/g" "$portfile"
     else
         sed -i "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
     fi
