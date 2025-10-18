@@ -22,19 +22,19 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $*"
+    echo -e "${BLUE}[INFO]${NC} $*" >&2
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $*"
+    echo -e "${GREEN}[SUCCESS]${NC} $*" >&2
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $*"
+    echo -e "${YELLOW}[WARNING]${NC} $*" >&2
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $*"
+    echo -e "${RED}[ERROR]${NC} $*" >&2
 }
 
 # Compare semantic versions
@@ -252,18 +252,19 @@ update_port_files() {
     local portfile="$port_dir/portfile.cmake"
 
     # Replace binary SHA512 placeholders with actual values
+    # Use | as delimiter to avoid issues with special characters
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/WINDOWS_SHA512_PLACEHOLDER/$windows_sha512/g" "$portfile"
-        sed -i '' "s/LINUX_SHA512_PLACEHOLDER/$linux_sha512/g" "$portfile"
-        sed -i '' "s/MACOS_SHA512_PLACEHOLDER/$macos_sha512/g" "$portfile"
+        sed -i '' "s|WINDOWS_SHA512_PLACEHOLDER|$windows_sha512|g" "$portfile"
+        sed -i '' "s|LINUX_SHA512_PLACEHOLDER|$linux_sha512|g" "$portfile"
+        sed -i '' "s|MACOS_SHA512_PLACEHOLDER|$macos_sha512|g" "$portfile"
         # Replace source SHA512 line in vcpkg_from_github section
-        sed -i '' -E "s/SHA512 [a-f0-9]{128}/SHA512 $sha512/g" "$portfile"
+        sed -i '' -E "s|SHA512 [a-f0-9]{128}|SHA512 $sha512|g" "$portfile"
     else
-        sed -i "s/WINDOWS_SHA512_PLACEHOLDER/$windows_sha512/g" "$portfile"
-        sed -i "s/LINUX_SHA512_PLACEHOLDER/$linux_sha512/g" "$portfile"
-        sed -i "s/MACOS_SHA512_PLACEHOLDER/$macos_sha512/g" "$portfile"
+        sed -i "s|WINDOWS_SHA512_PLACEHOLDER|$windows_sha512|g" "$portfile"
+        sed -i "s|LINUX_SHA512_PLACEHOLDER|$linux_sha512|g" "$portfile"
+        sed -i "s|MACOS_SHA512_PLACEHOLDER|$macos_sha512|g" "$portfile"
         # Replace source SHA512 line in vcpkg_from_github section
-        sed -i "s/SHA512 [a-f0-9]\{128\}/SHA512 $sha512/g" "$portfile"
+        sed -i "s|SHA512 [a-f0-9]\\{128\\}|SHA512 $sha512|g" "$portfile"
     fi
 
     # Verify all SHA512s were updated
