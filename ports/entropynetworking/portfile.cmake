@@ -1,17 +1,14 @@
-# Try to download pre-built binaries first, fall back to building from source
-set(PREBUILT_AVAILABLE FALSE)
-
 # Determine platform-specific release artifact name
 if(VCPKG_TARGET_IS_WINDOWS)
     set(RELEASE_NAME "EntropyNetworking-Windows-x64")
 elseif(VCPKG_TARGET_IS_OSX)
     set(RELEASE_NAME "EntropyNetworking-macOS-universal")
 elseif(VCPKG_TARGET_IS_LINUX)
-    # Default to GCC build for Linux
     set(RELEASE_NAME "EntropyNetworking-Linux-gcc-14")
 endif()
 
-# Try to download and extract pre-built binaries from GitHub releases
+# Try to download pre-built binaries from GitHub releases
+set(PREBUILT_AVAILABLE FALSE)
 if(DEFINED RELEASE_NAME)
     vcpkg_download_distfile(ARCHIVE
         URLS "https://github.com/Geenz/EntropyNetworking/releases/download/v${VERSION}/${RELEASE_NAME}.tar.gz"
@@ -24,22 +21,29 @@ if(DEFINED RELEASE_NAME)
         NO_REMOVE_ONE_LEVEL
     )
 
-    # Check if extraction was successful
-    if(EXISTS "${PREBUILT_PATH}")
+    if(EXISTS "${PREBUILT_PATH}/lib" AND EXISTS "${PREBUILT_PATH}/include")
         set(PREBUILT_AVAILABLE TRUE)
         message(STATUS "Using pre-built EntropyNetworking binaries from GitHub releases")
     endif()
 endif()
 
 if(PREBUILT_AVAILABLE)
-    # Copy pre-built files to package directory
+    # Pre-built binaries already have correct vcpkg structure: lib/, include/, lib/cmake/
     file(COPY "${PREBUILT_PATH}/" DESTINATION "${CURRENT_PACKAGES_DIR}")
 
-    # Fix up CMake configs
+    # Fix up CMake config files
     vcpkg_cmake_config_fixup(
         PACKAGE_NAME EntropyNetworking
         CONFIG_PATH lib/cmake/EntropyNetworking
     )
+
+    # Download and install license
+    vcpkg_download_distfile(LICENSE
+        URLS "https://raw.githubusercontent.com/Geenz/EntropyNetworking/v${VERSION}/LICENSE"
+        FILENAME "entropynetworking-${VERSION}-LICENSE"
+        SKIP_SHA512
+    )
+    file(INSTALL "${LICENSE}" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
 else()
     # Fall back to building from source
     message(STATUS "Pre-built binaries not available, building EntropyNetworking from source")
@@ -52,10 +56,7 @@ else()
         HEAD_REF main
     )
 
-    # Force static library linkage
-    set(VCPKG_LIBRARY_LINKAGE static)
-
-    # Configure the build
+    # Configure and build (release only)
     vcpkg_cmake_configure(
         SOURCE_PATH "${SOURCE_PATH}"
         OPTIONS
@@ -64,10 +65,9 @@ else()
             -DBUILD_SHARED_LIBS=OFF
     )
 
-    # Build and install
     vcpkg_cmake_install()
 
-    # Fix up CMake configs
+    # Fix up CMake config files
     vcpkg_cmake_config_fixup(
         PACKAGE_NAME EntropyNetworking
         CONFIG_PATH lib/cmake/EntropyNetworking
@@ -76,16 +76,7 @@ else()
     # Remove duplicate files from debug build
     file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
     file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
-endif()
 
-# Install license (download if using prebuilt)
-if(PREBUILT_AVAILABLE)
-    vcpkg_download_distfile(LICENSE
-        URLS "https://raw.githubusercontent.com/Geenz/EntropyNetworking/v${VERSION}/LICENSE"
-        FILENAME "entropynetworking-${VERSION}-LICENSE"
-        SKIP_SHA512
-    )
-    file(INSTALL "${LICENSE}" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
-else()
+    # Install license from source
     vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE")
 endif()
