@@ -171,7 +171,10 @@ calculate_binary_sha512s() {
 
     log_info "Calculating SHA512s for pre-built binaries..."
 
-    declare -A binary_sha512s
+    # Use simple variables instead of associative arrays for bash 3.2 compatibility
+    local windows_sha512=""
+    local linux_sha512=""
+    local macos_sha512=""
 
     for platform in "${REQUIRED_PLATFORMS[@]}"; do
         local artifact_name="${package_name}-${platform}.tar.gz"
@@ -204,14 +207,26 @@ calculate_binary_sha512s() {
             return 1
         fi
 
-        binary_sha512s["$platform"]="$sha512"
+        # Store SHA512 in appropriate variable based on platform
+        case "$platform" in
+            "Windows-x64")
+                windows_sha512="$sha512"
+                ;;
+            "Linux-gcc-14")
+                linux_sha512="$sha512"
+                ;;
+            "macOS-universal")
+                macos_sha512="$sha512"
+                ;;
+        esac
+
         log_success "  ✓ $platform: $sha512"
     done
 
-    # Export as environment variables for caller
-    echo "${binary_sha512s[Windows-x64]}"
-    echo "${binary_sha512s[Linux-gcc-14]}"
-    echo "${binary_sha512s[macOS-universal]}"
+    # Output in order: Windows, Linux, macOS
+    echo "$windows_sha512"
+    echo "$linux_sha512"
+    echo "$macos_sha512"
 }
 
 # Update package port files
@@ -251,27 +266,25 @@ update_port_files() {
     # Update portfile.cmake SHA512s
     local portfile="$port_dir/portfile.cmake"
 
-    # Replace binary SHA512 placeholders with actual values
+    # Replace binary SHA512s by finding the context-specific lines
     # Use | as delimiter to avoid issues with special characters
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s|WINDOWS_SHA512_PLACEHOLDER|$windows_sha512|g" "$portfile"
-        sed -i '' "s|LINUX_SHA512_PLACEHOLDER|$linux_sha512|g" "$portfile"
-        sed -i '' "s|MACOS_SHA512_PLACEHOLDER|$macos_sha512|g" "$portfile"
+        # macOS sed syntax
+        # Replace Windows SHA512: find VCPKG_TARGET_IS_WINDOWS, then replace the next BINARY_SHA512 line
+        sed -i '' "/VCPKG_TARGET_IS_WINDOWS/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$windows_sha512\")|" "$portfile"
+        # Replace macOS SHA512: find VCPKG_TARGET_IS_OSX, then replace the next BINARY_SHA512 line
+        sed -i '' "/VCPKG_TARGET_IS_OSX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$macos_sha512\")|" "$portfile"
+        # Replace Linux SHA512: find VCPKG_TARGET_IS_LINUX, then replace the next BINARY_SHA512 line
+        sed -i '' "/VCPKG_TARGET_IS_LINUX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$linux_sha512\")|" "$portfile"
         # Replace source SHA512 line in vcpkg_from_github section
         sed -i '' -E "s|SHA512 [a-f0-9]{128}|SHA512 $sha512|g" "$portfile"
     else
-        sed -i "s|WINDOWS_SHA512_PLACEHOLDER|$windows_sha512|g" "$portfile"
-        sed -i "s|LINUX_SHA512_PLACEHOLDER|$linux_sha512|g" "$portfile"
-        sed -i "s|MACOS_SHA512_PLACEHOLDER|$macos_sha512|g" "$portfile"
+        # Linux sed syntax
+        sed -i "/VCPKG_TARGET_IS_WINDOWS/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$windows_sha512\")|" "$portfile"
+        sed -i "/VCPKG_TARGET_IS_OSX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$macos_sha512\")|" "$portfile"
+        sed -i "/VCPKG_TARGET_IS_LINUX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$linux_sha512\")|" "$portfile"
         # Replace source SHA512 line in vcpkg_from_github section
         sed -i "s|SHA512 [a-f0-9]\\{128\\}|SHA512 $sha512|g" "$portfile"
-    fi
-
-    # Verify all SHA512s were updated
-    if grep -q "PLACEHOLDER" "$portfile"; then
-        log_error "SHA512 placeholder replacement failed - placeholders still exist"
-        grep "PLACEHOLDER" "$portfile"
-        return 1
     fi
 
     # Verify the source SHA512 was actually updated
