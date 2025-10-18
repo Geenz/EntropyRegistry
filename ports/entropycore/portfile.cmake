@@ -21,9 +21,12 @@ if(DEFINED RELEASE_NAME)
         NO_REMOVE_ONE_LEVEL
     )
 
-    if(EXISTS "${PREBUILT_PATH}/lib" AND EXISTS "${PREBUILT_PATH}/include")
+    # Pre-built binaries must have both debug and release configurations
+    if(EXISTS "${PREBUILT_PATH}/lib" AND EXISTS "${PREBUILT_PATH}/debug/lib" AND EXISTS "${PREBUILT_PATH}/include")
         set(PREBUILT_AVAILABLE TRUE)
         message(STATUS "Using pre-built EntropyCore binaries from GitHub releases")
+    else()
+        message(STATUS "Pre-built binaries incomplete (missing debug or release), will build from source")
     endif()
 endif()
 
@@ -56,7 +59,7 @@ else()
         HEAD_REF main
     )
 
-    # Configure and build (release only)
+    # Configure and build (both debug and release)
     vcpkg_cmake_configure(
         SOURCE_PATH "${SOURCE_PATH}"
         OPTIONS
