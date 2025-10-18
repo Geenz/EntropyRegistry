@@ -9,7 +9,7 @@ on:
       auto_merge:
         description: 'Push directly to main (skip PR)'
         required: false
-        default: false
+        default: true
         type: boolean
       dry_run:
         description: 'Dry run (log actions without making changes)'
