@@ -1,13 +1,13 @@
 # Determine platform-specific release artifact name and SHA512
 if(VCPKG_TARGET_IS_WINDOWS)
     set(RELEASE_NAME "EntropyCore-Windows-x64")
-    set(BINARY_SHA512 "c0a279943f4d6c19e23790b129bd34d57c840b7b58aa7350e39dc99ee542565a007605c4fbd26b9a0bd788b8bebe0c92f438e6d02103e6c2a5faa2057ce78699")
+    set(BINARY_SHA512 "77daed3bb8aa9f2bb4db3edbe2dddc16145905062ed2d096d5bbd4be48ffa4f35adaea8df12d711c93684ae3dd8d17fafa9d19c8084dfd4c5c3561507a3de2df")
 elseif(VCPKG_TARGET_IS_OSX)
     set(RELEASE_NAME "EntropyCore-macOS-universal")
-    set(BINARY_SHA512 "7aa91d4c5e686e87b8443320719741670b9bc2a2a83d0bf7e103ab5c378c46a43c25759c8e58cc3e17f508f5c37bc3c8d2ee5b26f72ca9f44a38b2afbcc587bd")
+    set(BINARY_SHA512 "bf755d216bb28e43d1438919da5a618c3b6bd25ab57bc71d3e620b868367d900490501cd9c0f1caba83bb27592b060e63663475d0864f4694db56698ee1b38eb")
 elseif(VCPKG_TARGET_IS_LINUX)
     set(RELEASE_NAME "EntropyCore-Linux-gcc-14")
-    set(BINARY_SHA512 "ebf8da34f6a73e4ea11f77111abdfa6a9d13307ecd8ad494b9b07fed3052cc60e58b0e8c332c1abdb94c85bf53a4d3fd228c3febca1d22041c5e022adc4ec226")
+    set(BINARY_SHA512 "e4d9c7cbae43bd6a198a9bbb36f71b327cc3c8b3392b633669f40336240adf4fb138a1af136176b08a805e7e9f878ff020abb190bbf7625c9fc21d4c526c804c")
 endif()
 
 # Try to download pre-built binaries from GitHub releases
@@ -58,7 +58,7 @@ else()
         OUT_SOURCE_PATH SOURCE_PATH
         REPO Geenz/EntropyCore
         REF v${VERSION}
-        SHA512 d299e465c64b60f841d5c591ac60fd63150085b2080b5087cb5a1fba40e58e91fc803124c7f5e63b77c17bd195c6063f6ab04b23a4cf845c8c587fe2daf51a38
+        SHA512 b8c975d3c6342880cf475069e65c6a4191690f05163b5c7faade3133137d7957becf010c8720c939eb8cfeccf8593930361b260830e5e745d281cc55cdc8faa7
         HEAD_REF main
     )
 
