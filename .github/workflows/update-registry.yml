@@ -74,12 +74,9 @@ jobs:
 
             ${{ env.UPDATE_SUMMARY }}
 
-            ### Verification
+            ### Build Configuration
 
-            All packages have been verified to have complete pre-built binaries:
-            - Windows x64
-            - Linux GCC 14
-            - macOS Universal
+            All packages are configured to build from source with static linking.
 
             Please review the changes before merging.
           commit-message: "Auto-update registry packages"

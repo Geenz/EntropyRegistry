@@ -2,13 +2,12 @@
 set -euo pipefail
 
 # Registry Auto-Update Script
-# Discovers packages, checks for new releases with complete binaries, and updates registry
+# Discovers packages, checks for new releases, and updates registry to build from source
 
 # Configuration
 DRY_RUN="${DRY_RUN:-false}"
 AUTO_MERGE="${AUTO_MERGE:-false}"
 FILTER_PACKAGES="${FILTER_PACKAGES:-}"
-REQUIRED_PLATFORMS=("Windows-x64" "Linux-gcc-14" "macOS-universal")
 
 # Tracking
 UPDATES_MADE=false
@@ -63,61 +62,6 @@ get_repo_from_portfile() {
     grep -A10 "vcpkg_from_github" "$portfile" | grep "REPO" | awk '{print $2}' | head -n1
 }
 
-# Get PascalCase package name for artifact matching
-get_package_name_pascal() {
-    local package="$1"
-
-    # Map package names to their PascalCase equivalents
-    case "$package" in
-        entropycore)
-            echo "EntropyCore"
-            ;;
-        entropynetworking)
-            echo "EntropyNetworking"
-            ;;
-        *)
-            # Fallback: split on underscore/hyphen, capitalize each part
-            echo "$package" | awk -F'[-_]' '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))} 1' OFS=''
-            ;;
-    esac
-}
-
-# Check if all required pre-built binaries exist for a release
-verify_binaries_exist() {
-    local repo="$1"
-    local version="$2"
-    local package_name="$3"
-
-    log_info "Verifying pre-built binaries for $package_name v$version..."
-
-    # Get release assets
-    local assets_json
-    if ! assets_json=$(gh api "repos/$repo/releases/tags/v$version" --jq '.assets[].name' 2>/dev/null); then
-        log_error "Failed to fetch release assets for $repo v$version"
-        return 1
-    fi
-
-    # Check each required platform
-    local all_present=true
-    for platform in "${REQUIRED_PLATFORMS[@]}"; do
-        local artifact_name="${package_name}-${platform}.tar.gz"
-
-        if echo "$assets_json" | grep -q "^${artifact_name}$"; then
-            log_success "  ✓ Found $artifact_name"
-        else
-            log_warning "  ✗ Missing $artifact_name"
-            all_present=false
-        fi
-    done
-
-    if [[ "$all_present" == "true" ]]; then
-        log_success "All required binaries present for $package_name v$version"
-        return 0
-    else
-        log_warning "Incomplete binary set for $package_name v$version - skipping"
-        return 1
-    fi
-}
 
 # Calculate SHA512 for source tarball
 calculate_source_sha512() {
@@ -159,84 +103,11 @@ calculate_source_sha512() {
     echo "$sha512"
 }
 
-# Calculate SHA512 for pre-built binaries
-calculate_binary_sha512s() {
-    local repo="$1"
-    local version="$2"
-    local package_name="$3"
-    local tmpdir
-
-    tmpdir=$(mktemp -d)
-    trap 'rm -rf "$tmpdir"' RETURN
-
-    log_info "Calculating SHA512s for pre-built binaries..."
-
-    # Use simple variables instead of associative arrays for bash 3.2 compatibility
-    local windows_sha512=""
-    local linux_sha512=""
-    local macos_sha512=""
-
-    for platform in "${REQUIRED_PLATFORMS[@]}"; do
-        local artifact_name="${package_name}-${platform}.tar.gz"
-        local binary_file="$tmpdir/$artifact_name"
-        local url="https://github.com/$repo/releases/download/v${version}/${artifact_name}"
-
-        log_info "  Downloading $artifact_name..."
-        if command -v curl &> /dev/null; then
-            if ! curl -sSL "$url" -o "$binary_file"; then
-                log_error "Failed to download $artifact_name"
-                return 1
-            fi
-        elif command -v wget &> /dev/null; then
-            if ! wget -q "$url" -O "$binary_file"; then
-                log_error "Failed to download $artifact_name"
-                return 1
-            fi
-        else
-            log_error "Neither curl nor wget found"
-            return 1
-        fi
-
-        local sha512
-        if command -v sha512sum &> /dev/null; then
-            sha512=$(sha512sum "$binary_file" | awk '{print $1}')
-        elif command -v shasum &> /dev/null; then
-            sha512=$(shasum -a 512 "$binary_file" | awk '{print $1}')
-        else
-            log_error "Neither sha512sum nor shasum found"
-            return 1
-        fi
-
-        # Store SHA512 in appropriate variable based on platform
-        case "$platform" in
-            "Windows-x64")
-                windows_sha512="$sha512"
-                ;;
-            "Linux-gcc-14")
-                linux_sha512="$sha512"
-                ;;
-            "macOS-universal")
-                macos_sha512="$sha512"
-                ;;
-        esac
-
-        log_success "  ✓ $platform: $sha512"
-    done
-
-    # Output in order: Windows, Linux, macOS
-    echo "$windows_sha512"
-    echo "$linux_sha512"
-    echo "$macos_sha512"
-}
-
 # Update package port files
 update_port_files() {
     local package="$1"
     local new_version="$2"
     local sha512="$3"
-    local windows_sha512="$4"
-    local linux_sha512="$5"
-    local macos_sha512="$6"
     local port_dir="ports/$package"
 
     log_info "Updating port files for $package to $new_version"
@@ -263,27 +134,15 @@ update_port_files() {
 
     log_success "  ✓ Updated $vcpkg_json"
 
-    # Update portfile.cmake SHA512s
+    # Update portfile.cmake source SHA512
     local portfile="$port_dir/portfile.cmake"
 
-    # Replace binary SHA512s by finding the context-specific lines
-    # Use | as delimiter to avoid issues with special characters
+    # Replace source SHA512 line in vcpkg_from_github section
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS sed syntax
-        # Replace Windows SHA512: find VCPKG_TARGET_IS_WINDOWS, then replace the next BINARY_SHA512 line
-        sed -i '' "/VCPKG_TARGET_IS_WINDOWS/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$windows_sha512\")|" "$portfile"
-        # Replace macOS SHA512: find VCPKG_TARGET_IS_OSX, then replace the next BINARY_SHA512 line
-        sed -i '' "/VCPKG_TARGET_IS_OSX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$macos_sha512\")|" "$portfile"
-        # Replace Linux SHA512: find VCPKG_TARGET_IS_LINUX, then replace the next BINARY_SHA512 line
-        sed -i '' "/VCPKG_TARGET_IS_LINUX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$linux_sha512\")|" "$portfile"
-        # Replace source SHA512 line in vcpkg_from_github section
         sed -i '' -E "s|SHA512 [a-f0-9]{128}|SHA512 $sha512|g" "$portfile"
     else
         # Linux sed syntax
-        sed -i "/VCPKG_TARGET_IS_WINDOWS/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$windows_sha512\")|" "$portfile"
-        sed -i "/VCPKG_TARGET_IS_OSX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$macos_sha512\")|" "$portfile"
-        sed -i "/VCPKG_TARGET_IS_LINUX/,/BINARY_SHA512/ s|set(BINARY_SHA512 \".*\")|set(BINARY_SHA512 \"$linux_sha512\")|" "$portfile"
-        # Replace source SHA512 line in vcpkg_from_github section
         sed -i "s|SHA512 [a-f0-9]\\{128\\}|SHA512 $sha512|g" "$portfile"
     fi
 
@@ -298,7 +157,7 @@ update_port_files() {
         return 1
     fi
 
-    log_success "  ✓ Updated $portfile SHA512s"
+    log_success "  ✓ Updated $portfile source SHA512"
 }
 
 # Update version database
@@ -380,16 +239,6 @@ process_package() {
     if version_less_than "$current_version" "$latest_version"; then
         log_info "New version available: $current_version -> $latest_version"
 
-        # Get PascalCase name for binaries
-        local package_name_pascal
-        package_name_pascal=$(get_package_name_pascal "$package")
-
-        # Verify binaries exist
-        if ! verify_binaries_exist "$repo" "$latest_version" "$package_name_pascal"; then
-            log_warning "Skipping $package due to missing binaries"
-            return 0
-        fi
-
         # Calculate source SHA512
         log_info "Calculating source SHA512..."
         local sha512
@@ -398,32 +247,7 @@ process_package() {
             return 1
         fi
 
-        log_success "SHA512: $sha512"
-
-        # Calculate binary SHA512s
-        log_info "Calculating binary SHA512s..."
-        local binary_sha512s
-        if ! binary_sha512s=$(calculate_binary_sha512s "$repo" "$latest_version" "$package_name_pascal"); then
-            log_error "Failed to calculate binary SHA512s for $package"
-            return 1
-        fi
-
-        # Parse the three SHA512s from the output (one per line)
-        local windows_sha512 linux_sha512 macos_sha512
-        windows_sha512=$(echo "$binary_sha512s" | sed -n '1p')
-        linux_sha512=$(echo "$binary_sha512s" | sed -n '2p')
-        macos_sha512=$(echo "$binary_sha512s" | sed -n '3p')
-
-        # Validate all SHA512s were captured
-        if [[ -z "$windows_sha512" ]] || [[ -z "$linux_sha512" ]] || [[ -z "$macos_sha512" ]]; then
-            log_error "Failed to parse all binary SHA512s"
-            log_error "Windows: $windows_sha512"
-            log_error "Linux: $linux_sha512"
-            log_error "macOS: $macos_sha512"
-            return 1
-        fi
-
-        log_success "Binary SHA512s captured successfully"
+        log_success "Source SHA512: $sha512"
 
         if [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would update $package to $latest_version"
@@ -432,7 +256,7 @@ process_package() {
         fi
 
         # Update port files
-        update_port_files "$package" "$latest_version" "$sha512" "$windows_sha512" "$linux_sha512" "$macos_sha512"
+        update_port_files "$package" "$latest_version" "$sha512"
 
         # Commit port changes
         git add "$port_dir/"
