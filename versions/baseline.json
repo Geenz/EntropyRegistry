@@ -6,7 +6,7 @@
       "port-version": 0
     },
     "entropynetworking": {
-      "baseline": "0.1.9",
+      "baseline": "0.2.0",
       "port-version": 0
     }
   }
