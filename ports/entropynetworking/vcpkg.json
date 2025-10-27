@@ -1,6 +1,6 @@
 {
   "name": "entropynetworking",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "port-version": 0,
   "description": "Networking library for Entropy Engine with Cap'n Proto and WebRTC support",
   "homepage": "https://github.com/Geenz/EntropyNetworking",
@@ -26,7 +26,10 @@
     "cpp-httplib",
     {
       "name": "curl",
-      "features": ["http2", "ssl"]
+      "features": [
+        "http2",
+        "ssl"
+      ]
     }
   ]
 }
