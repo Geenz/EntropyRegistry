@@ -19,6 +19,7 @@
     "capnproto",
     "libdatachannel",
     "openssl",
-    "zstd"
+    "zstd",
+    "tinyxml2"
   ]
 }
