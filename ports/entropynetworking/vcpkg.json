@@ -15,25 +15,10 @@
       "name": "vcpkg-cmake-config",
       "host": true
     },
-    {
-      "name": "entropycore",
-      "version>=": "1.0.0"
-    },
-    {
-      "name": "capnproto",
-      "version>=": "1.0.0"
-    },
-    {
-      "name": "libdatachannel",
-      "version>=": "0.21.0"
-    },
-    {
-      "name": "openssl",
-      "version>=": "3.6.0"
-    },
-    {
-      "name": "zstd",
-      "version>=": "1.5.0"
-    }
+    "entropycore",
+    "capnproto",
+    "libdatachannel",
+    "openssl",
+    "zstd"
   ]
 }

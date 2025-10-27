@@ -14,14 +14,8 @@
       "name": "vcpkg-cmake-config",
       "host": true
     },
-    {
-      "name": "boost-type-index",
-      "version>=": "1.88.0"
-    },
-    {
-      "name": "efsw",
-      "version>=": "1.5.0"
-    }
+    "boost-type-index",
+    "efsw"
   ],
   "features": {
     "tracy": {
