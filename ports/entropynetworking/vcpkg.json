@@ -1,6 +1,6 @@
 {
   "name": "entropynetworking",
-  "version": "0.4.3",
+  "version": "0.4.5",
   "port-version": 0,
   "description": "Networking library for Entropy Engine with Cap'n Proto and WebRTC support",
   "homepage": "https://github.com/Geenz/EntropyNetworking",
