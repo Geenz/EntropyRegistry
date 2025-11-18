@@ -5,7 +5,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO Geenz/EntropyNetworking
     REF v${VERSION}
-    SHA512 1eb6f4eb52262126c3d33b4c08a18c7b0945b76241dfee5fba08fdcfd78abdfc691b64cdf4bd89f16ebe29e799cda563d0775ebb973814e4f6904241827e8e8e
+    SHA512 cda26833c7a1a8a89fde34630eff73cdbeefc0fe18bd20eeabbdc4a140680a76e4a2a5793a93720029a0e1ea50c827bbe0fdc5d289856605e32fe5dac55e00ea
     HEAD_REF main
 )
 
